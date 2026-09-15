@@ -106,7 +106,7 @@ dbt_build_code = run_command("dbt build", check=False)
 # Bước 4.3: Luôn tạo Elementary Report để phân tích nguyên nhân lỗi (Failures/Errors)
 os.makedirs("/tmp/edr", exist_ok=True)
 report_local_path = "/tmp/edr/elementary_report.html"
-edr_code = run_command(f"edr report --profiles-dir {home_dbt} --profile logistics_dbt --file-path {report_local_path}", check=False)
+edr_code = run_command(f"edr report --profiles-dir {home_dbt} --file-path {report_local_path}", check=False)
 
 # -------------------------------------------------------------------------
 # 5. LƯU BÁO CÁO VÀO VOLUME HOẶC DBFS ĐỂ USER CÓ THỂ MỞ CHECK
