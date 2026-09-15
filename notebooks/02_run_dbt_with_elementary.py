@@ -80,6 +80,15 @@ def run_command(command, cwd=dbt_project_dir, check=True):
     if return_code != 0:
         error_msg = f"⚠️ Command finished with non-zero exit code {return_code}: {command}"
         print(error_msg, file=sys.stderr)
+        
+        # Tự động in file edr.log ra màn hình nếu có lỗi từ edr
+        edr_log_path = os.path.join(cwd, "edr.log")
+        if "edr " in command and os.path.exists(edr_log_path):
+            print("\n" + "="*20 + " EDR.LOG CÓ THỂ CHỨA LỖI CHI TIẾT " + "="*20, file=sys.stderr)
+            with open(edr_log_path, "r") as f:
+                print(f.read(), file=sys.stderr)
+            print("="*75 + "\n", file=sys.stderr)
+            
         if check:
             raise RuntimeError(error_msg)
 
