@@ -18433,3 +18433,34 @@ having count(*) > 1
 [0m13:36:26.591643 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000269C2386210>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000026A02B5F750>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x0000026A02B5F540>]}
 [0m13:36:26.592101 [debug] [MainThread]: Flushing usage events
 [0m13:36:28.454705 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m16:11:47.304933 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000225C570DFD0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000225C32A4E10>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000225C806FB10>]}
+
+
+============================== 16:11:47.316801 | 406c4487-c70a-4467-aefb-a0768efedf18 ==============================
+[0m16:11:47.316801 [info ] [MainThread]: Running with dbt=1.12.3
+[0m16:11:47.317557 [debug] [MainThread]: running dbt with arguments {'static_parser': 'True', 'no_print': 'None', 'version_check': 'True', 'target_path': 'None', 'maximum_seed_size_mib': '1', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'printer_width': '80', 'write_json': 'True', 'empty': 'None', 'log_cache_events': 'False', 'introspect': 'True', 'cache_selected_only': 'False', 'fail_fast': 'False', 'debug': 'False', 'log_format': 'default', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'quiet': 'False', 'warn_error': 'None', 'profiles_dir': 'C:\\Users\\buith\\OneDrive\\Desktop\\databricks-dbt-logistics-lakehouse\\dbt_project', 'invocation_command': 'dbt deps', 'hints_enabled': 'True', 'use_colors': 'True', 'use_experimental_parser': 'False', 'indirect_selection': 'eager', 'log_path': 'C:\\Users\\buith\\OneDrive\\Desktop\\databricks-dbt-logistics-lakehouse\\dbt_project\\logs'}
+[0m16:11:47.674620 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': '406c4487-c70a-4467-aefb-a0768efedf18', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000225C8100D60>]}
+[0m16:11:47.748109 [debug] [MainThread]: Set downloads directory='C:\Users\buith\AppData\Local\Temp\dbt-downloads-kz4j0aks'
+[0m16:11:47.749605 [debug] [MainThread]: Making package index registry request: GET https://hub.getdbt.com/api/v1/index.json
+[0m16:11:48.039601 [debug] [MainThread]: Response from registry index: GET https://hub.getdbt.com/api/v1/index.json 200
+[0m16:11:48.043271 [debug] [MainThread]: Making package registry request: GET https://hub.getdbt.com/api/v1/elementary-data/elementary.json
+[0m16:11:48.124283 [debug] [MainThread]: Response from registry: GET https://hub.getdbt.com/api/v1/elementary-data/elementary.json 200
+[0m16:11:48.137545 [debug] [MainThread]: Making package registry request: GET https://hub.getdbt.com/api/v1/dbt-labs/dbt_utils.json
+[0m16:11:48.182618 [debug] [MainThread]: Response from registry: GET https://hub.getdbt.com/api/v1/dbt-labs/dbt_utils.json 200
+[0m16:11:48.205330 [info ] [MainThread]: Updating lock file in file path: C:\Users\buith\OneDrive\Desktop\databricks-dbt-logistics-lakehouse\dbt_project/package-lock.yml
+[0m16:11:48.211561 [debug] [MainThread]: Set downloads directory='C:\Users\buith\AppData\Local\Temp\dbt-downloads-viiz3ugy'
+[0m16:11:48.225128 [info ] [MainThread]: Installing elementary-data/elementary
+[0m16:11:51.260662 [info ] [MainThread]: Installed from version 0.15.2
+[0m16:11:51.261274 [info ] [MainThread]: Updated version available: 0.26.0
+[0m16:11:51.261910 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'package', 'label': '406c4487-c70a-4467-aefb-a0768efedf18', 'property_': 'install', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000225C635D8C0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000225C3B70380>]}
+[0m16:11:51.262475 [info ] [MainThread]: Installing dbt-labs/dbt_utils
+[0m16:11:53.105763 [info ] [MainThread]: Installed from version 1.4.1
+[0m16:11:53.106343 [info ] [MainThread]: Up to date!
+[0m16:11:53.106882 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'package', 'label': '406c4487-c70a-4467-aefb-a0768efedf18', 'property_': 'install', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000225C838EE50>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000225C82E4410>]}
+[0m16:11:53.107438 [info ] [MainThread]: 
+[0m16:11:53.107932 [info ] [MainThread]: Updates available for packages: ['elementary-data/elementary']                 
+Update your versions in packages.yml, then run dbt deps
+[0m16:11:53.111200 [debug] [MainThread]: Command `dbt deps` succeeded at 16:11:53.110928 after 6.20 seconds
+[0m16:11:53.111736 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000225C7F0B5B0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000225C835FD90>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x00000225C7ECD3D0>]}
+[0m16:11:53.112209 [debug] [MainThread]: Flushing usage events
+[0m16:11:54.595618 [debug] [MainThread]: An error was encountered while trying to flush usage events
