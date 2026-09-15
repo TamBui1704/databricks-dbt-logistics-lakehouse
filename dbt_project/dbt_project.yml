@@ -27,8 +27,9 @@ models:
       +materialized: view
     silver:
       +schema: silver
-      +materialized: table
+      +materialized: incremental
     gold:
       +schema: gold
-      +materialized: table
+      +materialized: incremental
+
 

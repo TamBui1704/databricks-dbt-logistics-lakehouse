@@ -1,23 +1,27 @@
 -- models/silver/int_shipment_details.sql
 -- ============================================================
 -- Silver Layer: Làm sạch và JOIN các bảng thô
--- Lưu trữ: Delta Table trên Databricks (Schema: silver)
+-- Lưu trữ: Incremental Delta Table trên Databricks (Schema: silver)
 -- ============================================================
 
 {{
   config(
-    materialized = 'table',
-    schema       = 'silver',
-    file_format  = 'delta'
+    materialized         = 'incremental',
+    schema               = 'silver',
+    file_format          = 'delta',
+    unique_key           = 'shipment_id',
+    incremental_strategy = 'merge'
   )
 }}
 
 WITH shipments AS (
     SELECT * FROM {{ ref('stg_shipments') }}
-    {% if var('data_date', '1900-01-01') != '1900-01-01' %}
-    WHERE data_date = CAST('{{ var("data_date") }}' AS DATE)
+    {% if is_incremental() %}
+    -- Chế độ Incremental: Chỉ nạp các bản ghi từ ngày mới nhất trở đi
+    WHERE data_date >= (SELECT COALESCE(MAX(data_date), '1900-01-01') FROM {{ this }})
     {% endif %}
 ),
+
 
 carriers AS (
     SELECT * FROM {{ ref('stg_carriers') }}

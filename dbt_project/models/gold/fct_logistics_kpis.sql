@@ -1,23 +1,27 @@
 -- models/gold/fct_logistics_kpis.sql
 -- ============================================================
 -- Gold Layer: KPI tổng hợp theo ngày + carrier
--- Lưu trữ: Delta Table trên Databricks (Schema: gold)
+-- Lưu trữ: Incremental Delta Table trên Databricks (Schema: gold)
 -- ============================================================
 
 {{
   config(
-    materialized = 'table',
-    schema       = 'gold',
-    file_format  = 'delta'
+    materialized         = 'incremental',
+    schema               = 'gold',
+    file_format          = 'delta',
+    unique_key           = ['data_date', 'carrier_id'],
+    incremental_strategy = 'merge'
   )
 }}
 
 WITH base AS (
     SELECT * FROM {{ ref('int_shipment_details') }}
-    {% if var('data_date', '1900-01-01') != '1900-01-01' %}
-    WHERE data_date = CAST('{{ var("data_date") }}' AS DATE)
+    {% if is_incremental() %}
+    -- Chế độ Incremental: Chỉ tính toán KPI cho dữ liệu các ngày mới
+    WHERE data_date >= (SELECT COALESCE(MAX(data_date), '1900-01-01') FROM {{ this }})
     {% endif %}
 )
+
 
 SELECT
     data_date,
