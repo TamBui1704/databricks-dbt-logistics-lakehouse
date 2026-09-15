@@ -5,6 +5,8 @@
 target/
 dbt_packages/
 logs/
+edr_target/
+
 
 # Python Virtual Environment & Cache
 __pycache__/
