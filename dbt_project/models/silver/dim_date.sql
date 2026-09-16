@@ -1,12 +1,9 @@
 -- models/silver/dim_date.sql
 {{ config(materialized='table') }}
--- A simple date dimension generation
-WITH RECURSIVE dates AS (
-  SELECT DATE '2026-01-01' AS date_id
-  UNION ALL
-  SELECT date_id + INTERVAL 1 DAY
-  FROM dates
-  WHERE date_id < DATE '2026-12-31'
+
+-- Sử dụng hàm sequence() tối ưu của Spark SQL để tránh lỗi giới hạn đệ quy RECURSION_LEVEL_LIMIT_EXCEEDED
+WITH dates AS (
+  SELECT EXPLODE(SEQUENCE(DATE '2024-01-01', DATE '2026-12-31', INTERVAL 1 DAY)) AS date_id
 )
 SELECT
     date_id,
