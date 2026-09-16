@@ -65,13 +65,25 @@ shipments_schema = [
 ]
 today = datetime.now()
 
-def generate_new_shipments(start_id, count, max_days_ago=5):
+def generate_new_shipments(start_id, count, max_days_ago=5, is_historical=False):
     data = []
     for i in range(count):
         shipment_id = f"SHP{start_id + i:08d}"
         created_dt = today - timedelta(days=random.randint(0, max_days_ago), hours=random.randint(1, 10))
-        # Đơn mới mặc định là PENDING hoặc IN_TRANSIT
-        status = random.choice(["PENDING", "IN_TRANSIT"])
+        
+        if is_historical:
+            status = random.choice(["DELIVERED", "DELIVERED", "DELIVERED", "IN_TRANSIT", "PENDING", "CANCELLED", "RETURNED"])
+        else:
+            status = random.choice(["PENDING", "IN_TRANSIT"])
+            
+        if status == "DELIVERED":
+            delivered_dt = created_dt + timedelta(days=random.randint(1, 4), hours=random.randint(1, 5))
+            # Không cho phép ngày giao hàng vượt quá hôm nay
+            if delivered_dt > today:
+                delivered_dt = today - timedelta(hours=2)
+            delivered_at_str = delivered_dt.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            delivered_at_str = None
         
         data.append((
             shipment_id, f"C00{random.randint(1, 6)}", f"R00{random.randint(1, 7)}",
@@ -79,14 +91,14 @@ def generate_new_shipments(start_id, count, max_days_ago=5):
             round(random.uniform(0.5, 150.0), 2),
             round(random.uniform(0.5, 150.0) * random.uniform(15000, 30000), -3),
             status, random.choice(senders), random.choice(receivers),
-            created_dt.strftime("%Y-%m-%d %H:%M:%S"), None, created_dt.strftime("%Y-%m-%d"), 
+            created_dt.strftime("%Y-%m-%d %H:%M:%S"), delivered_at_str, created_dt.strftime("%Y-%m-%d"), 
             today.strftime("%Y-%m-%d %H:%M:%S") # updated_at
         ))
     return data
 
 if load_type == "FULL":
     print("⏳ Đang tạo 200 bản ghi dữ liệu mẫu ban đầu...")
-    data = generate_new_shipments(20260900, 200, max_days_ago=30)
+    data = generate_new_shipments(20260900, 200, max_days_ago=30, is_historical=True)
     df_shipments = spark.createDataFrame(data, shipments_schema)
     
     df_shipments.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable("raw.raw_shipments")
