@@ -5,8 +5,9 @@
 
 {{
   config(
-    materialized = 'view',
-    schema       = 'bronze'
+    materialized = 'incremental',
+    schema       = 'bronze',
+    unique_key   = 'shipment_id'
   )
 }}
 
@@ -24,7 +25,12 @@ SELECT
     CAST(created_at AS TIMESTAMP) AS created_at,
     CAST(delivered_at AS TIMESTAMP) AS delivered_at,
     CAST(data_date AS DATE) AS data_date,
+    CAST(updated_at AS TIMESTAMP) AS updated_at,
     -- Metadata
     current_timestamp() AS _loaded_at
 FROM raw.raw_shipments
+
+{% if is_incremental() %}
+  WHERE updated_at > (SELECT COALESCE(MAX(updated_at), '1900-01-01') FROM {{ this }})
+{% endif %}
 

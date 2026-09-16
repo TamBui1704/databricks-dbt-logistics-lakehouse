@@ -27,13 +27,22 @@ os.environ["DATABRICKS_TOKEN"] = dbutils.widgets.get("DATABRICKS_TOKEN")
 print("🚀 Cài đặt dbt...")
 subprocess.run([sys.executable, "-m", "pip", "install", "-r", "../requirements.txt", "--quiet"], check=True)
 
+# Lấy thêm tham số LOAD_TYPE để quyết định có full-refresh hay không
+dbutils.widgets.dropdown("LOAD_TYPE", "INCREMENTAL", ["FULL", "INCREMENTAL"], "Load Type")
+load_type = dbutils.widgets.get("LOAD_TYPE")
+
 # Chạy lệnh dbt deps
 print("🚀 Chạy dbt deps...")
 subprocess.run(["dbt", "deps"], check=True)
 
 # Chạy lệnh dbt build
-print("🚀 Chạy dbt build...")
-process = subprocess.run(["dbt", "build"], capture_output=False)
+dbt_command = ["dbt", "build"]
+if load_type == "FULL":
+    print("⚠️ Kích hoạt chế độ FULL LOAD (--full-refresh)")
+    dbt_command.append("--full-refresh")
+
+print(f"🚀 Chạy lệnh: {' '.join(dbt_command)}")
+process = subprocess.run(dbt_command, capture_output=False)
 
 if process.returncode != 0:
     print(f"⚠️ dbt build hoàn tất nhưng có một số model bị lỗi (Exit code: {process.returncode}).")

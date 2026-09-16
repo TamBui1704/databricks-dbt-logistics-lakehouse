@@ -30,6 +30,11 @@ results = run_results.get("results", [])
 invocation_id = metadata.get("invocation_id")
 generated_at = metadata.get("generated_at")
 
+# Kiểm tra args để xem có cờ --full-refresh hay không
+args = run_results.get("args", {})
+is_full_refresh = args.get("full_refresh", False)
+load_type_val = "FULL" if is_full_refresh else "INCREMENTAL"
+
 # Bóc tách thông tin từng model
 parsed_records = []
 for res in results:
@@ -45,6 +50,7 @@ for res in results:
     parsed_records.append(Row(
         invocation_id=invocation_id,
         generated_at=generated_at,
+        load_type=load_type_val,
         unique_id=unique_id,
         status=status,
         message=message,

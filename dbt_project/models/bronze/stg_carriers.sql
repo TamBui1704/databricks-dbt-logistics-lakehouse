@@ -5,8 +5,9 @@
 
 {{
   config(
-    materialized = 'view',
-    schema       = 'bronze'
+    materialized = 'incremental',
+    schema       = 'bronze',
+    unique_key   = 'carrier_id'
   )
 }}
 

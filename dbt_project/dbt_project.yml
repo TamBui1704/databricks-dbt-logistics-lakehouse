@@ -24,7 +24,7 @@ models:
     +file_format: delta
     bronze:
       +schema: bronze
-      +materialized: view
+      +materialized: incremental
     silver:
       +schema: silver
       +materialized: incremental

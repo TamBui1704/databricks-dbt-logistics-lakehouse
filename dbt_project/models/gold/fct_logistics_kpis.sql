@@ -17,8 +17,12 @@
 WITH base AS (
     SELECT * FROM {{ ref('int_shipment_details') }}
     {% if is_incremental() %}
-    -- Chế độ Incremental: Chỉ tính toán KPI cho dữ liệu các ngày mới
-    WHERE data_date >= (SELECT COALESCE(MAX(data_date), '1900-01-01') FROM {{ this }})
+    -- Chế độ Incremental: Tính toán lại KPI cho những ngày có sự thay đổi dữ liệu (Upsert)
+    WHERE data_date IN (
+        SELECT DISTINCT data_date 
+        FROM {{ ref('int_shipment_details') }} 
+        WHERE updated_at > (SELECT COALESCE(MAX(_updated_at), '1900-01-01') FROM {{ this }})
+    )
     {% endif %}
 )
 

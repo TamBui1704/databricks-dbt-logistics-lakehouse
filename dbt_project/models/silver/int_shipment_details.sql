@@ -17,8 +17,8 @@
 WITH shipments AS (
     SELECT * FROM {{ ref('stg_shipments') }}
     {% if is_incremental() %}
-    -- Chế độ Incremental: Chỉ nạp các bản ghi từ ngày mới nhất trở đi
-    WHERE data_date >= (SELECT COALESCE(MAX(data_date), '1900-01-01') FROM {{ this }})
+    -- Chế độ Incremental: Chỉ nạp hoặc cập nhật các bản ghi có thay đổi mới nhất
+    WHERE updated_at > (SELECT COALESCE(MAX(updated_at), '1900-01-01') FROM {{ this }})
     {% endif %}
 ),
 
@@ -77,6 +77,7 @@ enriched AS (
         END AS fee_per_km,
 
         -- Metadata
+        s.updated_at,
         s._loaded_at
 
     FROM shipments s
