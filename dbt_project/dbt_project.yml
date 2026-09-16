@@ -24,13 +24,13 @@ models:
     +file_format: delta
     bronze:
       +schema: bronze
-      +materialized: incremental
+      +materialized: view
     silver:
       +schema: silver
-      +materialized: incremental
+      +materialized: table # Các bảng Dim sẽ dùng table mặc định, Fact được override incremental trong file .sql
     gold:
       +schema: gold
-      +materialized: incremental
+      +materialized: view
 
 
 

@@ -1,70 +1,76 @@
 version: 2
 
+sources:
+  - name: main
+    schema: raw
+    tables:
+      - name: raw_customers
+      - name: raw_services
+      - name: raw_pos_locations
+      - name: raw_revenue
+      - name: raw_delivery
+
 models:
-  - name: stg_carriers
-    description: "Bronze: Dữ liệu thô công ty vận chuyển đọc trực tiếp từ S3"
+  # --- BRONZE ---
+  - name: stg_customers
+  - name: stg_services
+  - name: stg_pos_locations
+  - name: stg_revenue
+  - name: stg_delivery
+
+  # --- SILVER (Dims) ---
+  - name: dim_customer
+    description: "Silver: Dimension table for Customers"
     columns:
-      - name: carrier_id
-        description: "Mã công ty vận chuyển (PK)"
+      - name: customer_id
         tests:
           - unique
           - not_null
-      - name: carrier_name
-        tests:
-          - not_null
-      - name: rating
-        tests:
-          - not_null
 
-  - name: stg_routes
-    description: "Bronze: Dữ liệu thô tuyến đường đọc trực tiếp từ S3"
+  - name: dim_service
+    description: "Silver: Dimension table for Services"
     columns:
-      - name: route_id
-        description: "Mã tuyến đường (PK)"
+      - name: service_id
         tests:
           - unique
           - not_null
-      - name: distance_km
-        tests:
-          - not_null
 
-  - name: stg_shipments
-    description: "Bronze: Dữ liệu thô đơn hàng vận chuyển đọc trực tiếp từ S3"
+  - name: dim_pos_location
+    description: "Silver: Dimension table for POS Locations"
     columns:
-      - name: shipment_id
-        description: "Mã đơn hàng (PK)"
+      - name: pos_id
         tests:
           - unique
           - not_null
-      - name: carrier_id
+
+  - name: dim_date
+    description: "Silver: Dimension table for Dates"
+    columns:
+      - name: date_id
         tests:
+          - unique
           - not_null
-          - relationships:
-              to: ref('stg_carriers')
-              field: carrier_id
-      - name: status
-        tests:
-          - accepted_values:
-              values: ['Đang vận chuyển', 'Đã giao', 'Hoàn hàng', 'Chờ lấy hàng', 'Thất lạc', 'DELIVERED', 'IN_TRANSIT', 'PENDING', 'CANCELLED', 'RETURNED']
 
-
-  - name: int_shipment_details
-    description: "Silver: Đơn hàng đã được enrich với thông tin carrier và tuyến đường"
+  # --- SILVER (Facts) ---
+  - name: fact_revenue
+    description: "Silver: Fact table for Revenue"
     columns:
       - name: shipment_id
         tests:
           - unique
           - not_null
 
-  - name: fct_logistics_kpis
-    description: "Gold: KPI tổng hợp theo ngày và carrier phục vụ báo cáo"
+  - name: fact_delivery_remuneration
+    description: "Silver: Fact table for Delivery Remuneration"
     columns:
-      - name: data_date
+      - name: shipment_id
         tests:
+          - unique
           - not_null
-      - name: carrier_id
-        tests:
-          - not_null
-      - name: delivery_rate_pct
-        tests:
-          - not_null
+          
+  # --- GOLD (Views) ---
+  - name: gold_view_revenue
+    description: "Gold: OBT View for Revenue Analytics"
+  
+  - name: gold_view_delivery
+    description: "Gold: OBT View for Delivery Remuneration Analytics"

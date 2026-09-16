@@ -1,163 +1,106 @@
-# Databricks notebook source
-# ==============================================================================
-# DATABRICKS NOTEBOOK: 01_generate_raw_data.py
-# Schema đích: raw (Tầng dữ liệu thô)
-# Bảng sinh ra: raw.raw_carriers, raw.raw_routes, raw.raw_shipments
-# Hỗ trợ tham số LOAD_TYPE: FULL hoặc INCREMENTAL
-# ==============================================================================
+import os
+from pyspark.sql.functions import col, rand, round, expr, when, date_add, to_timestamp, lit
+from databricks.connect import DatabricksSession
+from dotenv import load_dotenv
 
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import current_timestamp, col
-from datetime import datetime, timedelta
-import random
-
-# Lấy tham số LOAD_TYPE (Mặc định là INCREMENTAL để chạy hàng ngày)
-dbutils.widgets.dropdown("LOAD_TYPE", "INCREMENTAL", ["FULL", "INCREMENTAL"], "Load Type")
-load_type = dbutils.widgets.get("LOAD_TYPE")
-
-print(f"🚀 Bắt đầu tạo dữ liệu giả lập. Chế độ: {load_type} Load")
-
-# 0. Tự động tạo các Schemas nếu chưa tồn tại
-spark.sql("CREATE SCHEMA IF NOT EXISTS raw")
-spark.sql("CREATE SCHEMA IF NOT EXISTS bronze")
-spark.sql("CREATE SCHEMA IF NOT EXISTS silver")
-spark.sql("CREATE SCHEMA IF NOT EXISTS gold")
-
-# ------------------------------------------------------------------------------
-# 1 & 2: Bảng Danh mục (Carriers & Routes) thường tĩnh nên có thể ghi đè
-# ------------------------------------------------------------------------------
-if load_type == "FULL":
-    carriers_data = [
-        ("C001", "Giao Hàng Nhanh (GHN)", "Express", 500.0, 4.8, True, "2024-01-15"),
-        ("C002", "Viettel Post", "Standard", 2000.0, 4.6, True, "2024-01-10"),
-        ("C003", "VNPost (Bưu điện VN)", "Standard", 5000.0, 4.2, True, "2024-02-01"),
-        ("C004", "J&T Express", "Express", 300.0, 4.5, True, "2024-03-05"),
-        ("C005", "Ninja Van", "Express", 400.0, 4.3, True, "2024-03-12"),
-        ("C006", "Vận tải Đa Quốc Gia", "Freight", 20000.0, 4.9, True, "2024-04-01"),
-    ]
-    carriers_schema = ["carrier_id", "carrier_name", "carrier_type", "max_weight_kg", "rating", "is_active", "created_at"]
-    spark.createDataFrame(carriers_data, carriers_schema).write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable("raw.raw_carriers")
-
-    routes_data = [
-        ("R001", "Hà Nội", "TP. Hồ Chí Minh", 1720, 3),
-        ("R002", "Hà Nội", "Đà Nẵng", 760, 2),
-        ("R003", "TP. Hồ Chí Minh", "Đà Nẵng", 960, 2),
-        ("R004", "TP. Hồ Chí Minh", "Cần Thơ", 160, 1),
-        ("R005", "Hà Nội", "Hải Phòng", 120, 1),
-        ("R006", "Đà Nẵng", "Nha Trang", 530, 2),
-        ("R007", "TP. Hồ Chí Minh", "Bình Dương", 45, 1),
-    ]
-    routes_schema = ["route_id", "origin_province", "dest_province", "distance_km", "est_transit_days"]
-    spark.createDataFrame(routes_data, routes_schema).write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable("raw.raw_routes")
-    print("✅ Đã ghi đè các bảng danh mục (Carriers & Routes).")
-
-# ------------------------------------------------------------------------------
-# 3. Bảng Giao dịch (Shipments) - Upsert or Overwrite
-# ------------------------------------------------------------------------------
-product_types = ["Electronics", "Fashion", "Food & Beverage", "Home Appliances", "Documents", "Cosmetics"]
-vehicle_types = ["Van 1T", "Truck 5T", "Container 20ft", "Motorbike"]
-senders = ["Tiki Trading", "Shopee Mall", "Samsung VN", "Unilever FC", "Thế Giới Di Động", "Phong Vũ Computer"]
-receivers = ["Nguyễn Văn A", "Trần Thị B", "Lê Hoàng C", "Phạm Minh D", "Vũ Quốc E", "Đặng Thảo F"]
-shipments_schema = [
-    "shipment_id", "carrier_id", "route_id", "product_type", "vehicle_type", 
-    "weight_kg", "shipping_fee", "status", "sender_name", "receiver_name", 
-    "created_at", "delivered_at", "data_date", "updated_at"
-]
-today = datetime.now()
-
-def generate_new_shipments(start_id, count, max_days_ago=5, is_historical=False):
-    data = []
-    for i in range(count):
-        shipment_id = f"SHP{start_id + i:08d}"
-        created_dt = today - timedelta(days=random.randint(0, max_days_ago), hours=random.randint(1, 10))
-        
-        if is_historical:
-            status = random.choice(["DELIVERED", "DELIVERED", "DELIVERED", "IN_TRANSIT", "PENDING", "CANCELLED", "RETURNED"])
-        else:
-            status = random.choice(["PENDING", "IN_TRANSIT"])
-            
-        if status == "DELIVERED":
-            delivered_dt = created_dt + timedelta(days=random.randint(1, 4), hours=random.randint(1, 5))
-            # Không cho phép ngày giao hàng vượt quá hôm nay
-            if delivered_dt > today:
-                delivered_dt = today - timedelta(hours=2)
-            delivered_at_str = delivered_dt.strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            delivered_at_str = None
-        
-        data.append((
-            shipment_id, f"C00{random.randint(1, 6)}", f"R00{random.randint(1, 7)}",
-            random.choice(product_types), random.choice(vehicle_types),
-            round(random.uniform(0.5, 150.0), 2),
-            round(random.uniform(0.5, 150.0) * random.uniform(15000, 30000), -3),
-            status, random.choice(senders), random.choice(receivers),
-            created_dt.strftime("%Y-%m-%d %H:%M:%S"), delivered_at_str, created_dt.strftime("%Y-%m-%d"), 
-            today.strftime("%Y-%m-%d %H:%M:%S") # updated_at
-        ))
-    return data
-
-if load_type == "FULL":
-    print("⏳ Đang tạo 200 bản ghi dữ liệu mẫu ban đầu...")
-    data = generate_new_shipments(20260900, 200, max_days_ago=30, is_historical=True)
-    df_shipments = spark.createDataFrame(data, shipments_schema)
+def get_spark_session():
+    load_dotenv()
+    if "DATABRICKS_TOKEN" in os.environ:
+        del os.environ["DATABRICKS_TOKEN"]
     
-    df_shipments.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable("raw.raw_shipments")
-    print("✅ Đã ghi đè tạo bảng: raw.raw_shipments (200 bản ghi FULL LOAD)")
+    print("Dang khoi tao Spark Session qua Databricks Connect (Serverless)...")
+    return DatabricksSession.builder.serverless().getOrCreate()
 
-elif load_type == "INCREMENTAL":
-    print("⏳ Đang giả lập thay đổi trạng thái (Upsert)...")
+def main():
+    spark = get_spark_session()
+    print("Da ket noi Spark Session thanh cong!")
+
+    catalog = "main"
+    schema = "raw"
+    spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog}.{schema}")
+    print(f"Da tao schema {catalog}.{schema}")
+
+    # ==========================================
+    # 1. TẠO DỮ LIỆU DIMENSIONS (Ghi đè)
+    # ==========================================
+    print("Generating Dimensions...")
+    customer_data = [("CUST_001", "Shopee", "B2B"), ("CUST_002", "Tiki", "B2B"), ("CUST_003", "Lazada", "B2B"), ("CUST_004", "Nguyen Van A", "B2C"), ("CUST_005", "Tran Thi B", "B2C")]
+    service_data = [("SRV_EMS", "Chuyen phat nhanh EMS", "Nhanh"), ("SRV_STD", "Chuyen phat Tieu chuan", "Thuong"), ("SRV_EXP", "Chuyen phat Hoa toc", "Hoa toc")]
+    pos_data = [("POS_HN1", "Buu cuc TT Ha Noi", "Ha Noi", "Mien Bac"), ("POS_HN2", "Buu cuc Cau Giay", "Ha Noi", "Mien Bac"), ("POS_HCM1", "Buu cuc TT HCM", "Ho Chi Minh", "Mien Nam"), ("POS_DN1", "Buu cuc Da Nang", "Da Nang", "Mien Trung")]
     
-    # 1. Lấy dữ liệu hiện tại để thay đổi trạng thái
-    try:
-        df_existing = spark.table("raw.raw_shipments").toPandas()
-        
-        # Tìm các đơn chưa giao
-        pending_mask = df_existing['status'].isin(['PENDING', 'IN_TRANSIT'])
-        pending_indices = df_existing[pending_mask].index.tolist()
-        
-        # Chọn random 30% đơn chưa giao để cập nhật thành DELIVERED
-        num_to_update = max(1, int(len(pending_indices) * 0.3))
-        indices_to_update = random.sample(pending_indices, min(num_to_update, len(pending_indices)))
-        
-        updates_data = []
-        for idx in indices_to_update:
-            row = df_existing.iloc[idx]
-            created_dt = datetime.strptime(row['created_at'], "%Y-%m-%d %H:%M:%S")
-            delivered_dt = today - timedelta(hours=random.randint(1, 10))
-            if delivered_dt < created_dt:
-                delivered_dt = created_dt + timedelta(hours=2)
-                
-            updates_data.append((
-                row['shipment_id'], row['carrier_id'], row['route_id'], row['product_type'], 
-                row['vehicle_type'], float(row['weight_kg']), float(row['shipping_fee']),
-                "DELIVERED", row['sender_name'], row['receiver_name'],
-                row['created_at'], delivered_dt.strftime("%Y-%m-%d %H:%M:%S"), row['data_date'], 
-                today.strftime("%Y-%m-%d %H:%M:%S") # updated_at mới
-            ))
-            
-        print(f"   -> Đã giả lập {len(updates_data)} đơn hàng cập nhật thành DELIVERED.")
-        
-        # 2. Sinh thêm đơn hàng mới (Ví dụ: 10 đơn mới)
-        max_id_str = df_existing['shipment_id'].max()
-        next_id = int(max_id_str.replace("SHP", "")) + 1
-        new_data = generate_new_shipments(next_id, 10, max_days_ago=1)
-        print(f"   -> Đã sinh {len(new_data)} đơn hàng mới (INSERT).")
-        
-        # Gộp dữ liệu update và insert thành 1 DataFrame thay đổi (Delta)
-        df_upsert = spark.createDataFrame(updates_data + new_data, shipments_schema)
-        
-        # 3. Thực hiện lệnh MERGE INTO (Upsert) vào bảng gốc
-        from delta.tables import DeltaTable
-        delta_table = DeltaTable.forName(spark, "raw.raw_shipments")
-        
-        delta_table.alias("target").merge(
-            df_upsert.alias("source"),
-            "target.shipment_id = source.shipment_id"
-        ).whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
-        
-        print("✅ Đã hoàn tất MERGE (Upsert) vào raw.raw_shipments!")
+    df_customers = spark.createDataFrame(customer_data, ["customer_id", "customer_name", "customer_type"])
+    df_services = spark.createDataFrame(service_data, ["service_id", "service_name", "service_group"])
+    df_pos = spark.createDataFrame(pos_data, ["pos_id", "pos_name", "province", "region"])
+    
+    df_customers.write.format("delta").mode("overwrite").saveAsTable(f"{catalog}.{schema}.raw_customers")
+    df_services.write.format("delta").mode("overwrite").saveAsTable(f"{catalog}.{schema}.raw_services")
+    df_pos.write.format("delta").mode("overwrite").saveAsTable(f"{catalog}.{schema}.raw_pos_locations")
 
-    except Exception as e:
-        print(f"⚠️ Lỗi khi chạy Incremental: {e}. Vui lòng chạy FULL load trước để tạo bảng!")
+    # ==========================================
+    # 2. TẠO DỮ LIỆU CÓ PHÂN PHỐI THỜI GIAN THỰC TẾ
+    # ==========================================
+    print("Generating ~10M records with realistic time-series distribution...")
+    
+    # 2.1. Sinh bộ lịch (Calendar) 990 ngày
+    df_days = spark.range(990).withColumn("created_at_date", expr("date_add(cast('2024-01-01' as date), cast(id as int))"))
+    
+    # 2.2. Gán số lượng đơn hàng (Volume) cho từng ngày
+    # Thứ 1 (Sunday) và Thứ 7 (Saturday) theo PySpark dayofweek là 1 và 7
+    # Ngày thường: ~12,000 - 14,000 đơn/ngày
+    # Cuối tuần: ~3,000 - 5,000 đơn/ngày
+    df_days = df_days \
+        .withColumn("dow", expr("dayofweek(created_at_date)")) \
+        .withColumn("is_weekend", expr("dow = 1 OR dow = 7")) \
+        .withColumn("daily_orders", 
+                    when(col("is_weekend"), expr("cast(4000 + rand() * 2000 as int)"))
+                    .otherwise(expr("cast(12000 + rand() * 2000 as int)")))
 
-print("\n🎉 HOÀN THÀNH: Xử lý dữ liệu raw thành công!")
+    # 2.3. Nhân bản dòng (Explode) để tạo ra đúng số lượng đơn hàng cho mỗi ngày
+    # Đây là kỹ thuật cực kỳ tối ưu của Spark để sinh dữ liệu Time-series
+    df_base = df_days \
+        .withColumn("dummy", expr("explode(array_repeat(1, daily_orders))")) \
+        .drop("dummy") \
+        .withColumn("row_id", expr("monotonically_increasing_id()")) \
+        .withColumn("id_str", col("row_id").cast("string"))
+
+    # Random Customers & Services
+    customers_expr = "CASE WHEN rand() < 0.3 THEN 'CUST_001' WHEN rand() < 0.6 THEN 'CUST_002' WHEN rand() < 0.8 THEN 'CUST_003' ELSE 'CUST_004' END"
+    services_expr = "CASE WHEN rand() < 0.5 THEN 'SRV_EMS' WHEN rand() < 0.8 THEN 'SRV_STD' ELSE 'SRV_EXP' END"
+    pos_expr = "CASE WHEN rand() < 0.4 THEN 'POS_HN1' WHEN rand() < 0.7 THEN 'POS_HCM1' WHEN rand() < 0.9 THEN 'POS_DN1' ELSE 'POS_HN2' END"
+    
+    df_fact = df_base \
+        .withColumn("shipment_id", expr("concat('SHP_', id_str)")) \
+        .withColumn("customer_id", expr(customers_expr)) \
+        .withColumn("service_id", expr(services_expr)) \
+        .withColumn("origin_pos_id", expr(pos_expr)) \
+        .withColumn("dest_pos_id", expr(pos_expr)) \
+        .withColumn("weight_kg", round(rand() * 20 + 0.5, 1))
+
+    # Gán giờ tạo ngẫu nhiên trong ngày và thời gian giao hàng
+    df_fact = df_fact \
+        .withColumn("created_at", to_timestamp(expr("concat(created_at_date, ' ', cast(rand()*12 + 7 as int), ':', cast(rand()*59 as int), ':00')"))) \
+        .withColumn("delivered_at", to_timestamp(expr("date_add(created_at_date, cast(rand() * 3 + 1 as int))")))
+        
+    # Tính tiền cước và thù lao
+    df_revenue = df_fact \
+        .withColumn("base_rate", when(col("service_id") == "SRV_EMS", 30000).when(col("service_id") == "SRV_STD", 20000).otherwise(50000)) \
+        .withColumn("revenue_amount", col("base_rate") + (col("weight_kg") * 5000).cast("int")) \
+        .select("shipment_id", "customer_id", "service_id", "origin_pos_id", "dest_pos_id", "revenue_amount", "weight_kg", "created_at")
+
+    df_delivery = df_fact \
+        .withColumn("delivery_fee", when(col("dest_pos_id").like("POS_HN%"), 10000).when(col("dest_pos_id").like("POS_HCM%"), 12000).otherwise(15000)) \
+        .select("shipment_id", col("dest_pos_id").alias("delivery_pos_id"), "service_id", "delivery_fee", "delivered_at")
+
+    # ==========================================
+    # 3. LƯU XUỐNG DELTA TABLES
+    # ==========================================
+    print("Saving 10M records to raw_revenue... (Please wait)")
+    df_revenue.write.format("delta").mode("overwrite").saveAsTable(f"{catalog}.{schema}.raw_revenue")
+    
+    print("Saving 10M records to raw_delivery... (Please wait)")
+    df_delivery.write.format("delta").mode("overwrite").saveAsTable(f"{catalog}.{schema}.raw_delivery")
+
+    print("Hoan tat sinh 10 TRIEU du lieu mau vao Unity Catalog!")
+
+if __name__ == "__main__":
+    main()
