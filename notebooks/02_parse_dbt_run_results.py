@@ -41,11 +41,13 @@ for res in results:
     unique_id = res.get("unique_id", "")
     status = res.get("status", "")
     message = res.get("message", "")
-    execution_time = res.get("execution_time", 0.0)
+    execution_time_raw = res.get("execution_time")
+    execution_time = float(execution_time_raw) if execution_time_raw is not None else 0.0
     
     # Số dòng thay đổi (thường có trong dbt build của Delta)
-    adapter_response = res.get("adapter_response", {})
-    rows_affected = adapter_response.get("rows_affected", 0)
+    adapter_response = res.get("adapter_response") or {}
+    rows_affected_raw = adapter_response.get("rows_affected")
+    rows_affected = int(rows_affected_raw) if rows_affected_raw is not None else 0
     
     parsed_records.append(Row(
         invocation_id=invocation_id,
