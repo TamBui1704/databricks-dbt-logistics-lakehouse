@@ -33,5 +33,8 @@ models:
       +materialized: incremental
   elementary:
     +schema: elementary
+    +file_format: delta
+    +tblproperties:
+      delta.columnMapping.mode: name
 
 
