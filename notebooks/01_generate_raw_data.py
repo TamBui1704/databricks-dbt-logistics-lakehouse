@@ -1,31 +1,15 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # 01 - Generate Raw Data
-# MAGIC Notebook sinh dữ liệu giả lập (~10 triệu bản ghi) cho logistics lakehouse vào Unity Catalog schema `main.raw`.
+# MAGIC Notebook sinh dữ liệu giả lập (~10 triệu bản ghi) cho logistics lakehouse vào schema `workspace.raw`.
 
 # COMMAND ----------
 
-import os
 from pyspark.sql.functions import col, rand, round, expr, when, date_add, to_timestamp, lit
 
-# Khởi tạo Spark Session (nếu chạy local qua Databricks Connect; trên Databricks Workspace biến spark đã có sẵn)
-try:
-    spark
-except NameError:
-    from databricks.connect import DatabricksSession
-    from dotenv import load_dotenv
-    load_dotenv()
-    if "DATABRICKS_TOKEN" in os.environ:
-        del os.environ["DATABRICKS_TOKEN"]
-    print("Đang khởi tạo Spark Session qua Databricks Connect...")
-    spark = DatabricksSession.builder.serverless().getOrCreate()
-
-print("Đã kết nối Spark Session thành công!")
-
-# COMMAND ----------
-
-catalog = "main"
+catalog = "workspace"
 schema = "raw"
+
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS {catalog}.{schema}")
 print(f"Đã tạo schema {catalog}.{schema}")
 
