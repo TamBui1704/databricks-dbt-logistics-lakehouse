@@ -8,9 +8,7 @@ SELECT
     p.pos_name AS delivery_pos_name,
     p.province AS delivery_province,
     p.region AS delivery_region,
-    d.year,
-    d.month,
-    d.quarter
+    f.date_id
 FROM {{ ref('fact_delivery_remuneration') }} f
 LEFT JOIN {{ ref('dim_service') }} s ON f.service_id = s.service_id
 LEFT JOIN {{ ref('dim_pos_location') }} p ON f.delivery_pos_id = p.pos_id

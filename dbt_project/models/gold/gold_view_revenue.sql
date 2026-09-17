@@ -14,9 +14,7 @@ SELECT
     p_dest.pos_name AS dest_pos_name,
     p_dest.province AS dest_province,
     p_dest.region AS dest_region,
-    d.year,
-    d.month,
-    d.quarter
+    f.date_id
 FROM {{ ref('fact_revenue') }} f
 LEFT JOIN {{ ref('dim_customer') }} c ON f.customer_id = c.customer_id
 LEFT JOIN {{ ref('dim_service') }} s ON f.service_id = s.service_id
